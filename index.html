@@ -720,6 +720,7 @@
     let gameState = 'ready';
     let fallers = [];
     let particles = [];
+    let explosions = [];
     let floaters = [];
     let clouds = [];
     let flowers = [];
@@ -730,6 +731,8 @@
     let pointerX = 0;
     let endReason = 'time';
     let stats = { treats: 0, bumps: 0 };
+      lastTntExplosionTime = -999;
+    let lastTntExplosionTime = -999;
 
     const basket = {
       x: width / 2,
@@ -862,6 +865,7 @@
       stats = { treats: 0, bumps: 0 };
       fallers = [];
       particles = [];
+      explosions = [];
       floaters = [];
       basket.x = width / 2;
       basket.wobble = 0;
@@ -896,23 +900,26 @@
     }
 
     function difficulty() {
-      // Gentle full-game ramp: the first 30-45 seconds stay playable, then the pressure rises.
       return clamp(elapsed / GAME_SECONDS, 0, 1);
     }
 
+    function stageProgress(startSecond, endSecond) {
+      return clamp((elapsed - startSecond) / (endSecond - startSecond), 0, 1);
+    }
+
     function midDifficulty() {
-      // Starts after the easier opening so the middle game gets more active without feeling unfair.
-      return clamp((elapsed - 35) / 35, 0, 1);
+      // Starts after the easy intro so the first 30-45 seconds stay friendly.
+      return stageProgress(35, 70);
     }
 
     function lateDifficulty() {
-      // Final stretch pressure, especially noticeable in the last 20 seconds.
-      return clamp((elapsed - 70) / 20, 0, 1);
+      // Final 30 seconds: fewer good items and more pressure, but still dodgeable.
+      return stageProgress(60, 90);
     }
 
     function finalTenDifficulty() {
-      // Last 10 seconds are the chaos window for very fast rocks.
-      return clamp((GAME_SECONDS - timeLeft) - 80, 0, 10) / 10;
+      // Last 10 seconds are the max-speed rock window.
+      return stageProgress(80, 90);
     }
 
     function chooseWeighted(options) {
@@ -926,66 +933,130 @@
     }
 
     function chooseFallerType() {
-      const d = difficulty();
-      const mid = midDifficulty();
-      const late = lateDifficulty();
+      // Timed unlock schedule:
+      // 0-10s: mostly red apples.
+      // 15s: red/green apples + paper crane.
+      // 20s: pie, cilantro, and paper crane join.
+      // 30s: slow rocks join.
+      // 35-45s: rocks speed up and slow TNT joins.
+      // 60s+: TNT can explode and good items become less common.
+      const jitter = random(-0.04, 0.04);
 
-      // First 30-45 seconds are more forgiving. After that, hazards gradually take over.
-      // Random jitter keeps each playthrough from having the same scoring rhythm.
-      const goodChance = clamp(
-        (elapsed < 30
-          ? 0.78 - d * 0.08
-          : elapsed < 45
-            ? 0.66 - mid * 0.12
-            : 0.46 - mid * 0.16 - late * 0.08) + random(-0.075, 0.075),
-        0.22,
-        0.82
-      );
+      if (elapsed < 10) {
+        return Math.random() < 0.92 ? 'redApple' : 'greenApple';
+      }
 
-      if (Math.random() < goodChance) {
+      if (elapsed < 15) {
         return chooseWeighted([
-          { type: 'redApple', weight: 0.44 + random(-0.08, 0.08) },
-          { type: 'greenApple', weight: 0.34 + random(-0.07, 0.07) },
-          { type: 'pie', weight: 0.22 + random(-0.05, 0.05) }
+          { type: 'redApple', weight: 0.78 + jitter },
+          { type: 'greenApple', weight: 0.22 - jitter }
         ]);
       }
 
+      if (elapsed < 20) {
+        return chooseWeighted([
+          { type: 'redApple', weight: 0.52 + jitter },
+          { type: 'greenApple', weight: 0.32 },
+          { type: 'paperPlane', weight: 0.16 - jitter }
+        ]);
+      }
+
+      if (elapsed < 30) {
+        return chooseWeighted([
+          { type: 'redApple', weight: 0.34 },
+          { type: 'greenApple', weight: 0.27 },
+          { type: 'pie', weight: 0.20 },
+          { type: 'paperPlane', weight: 0.11 + random(-0.03, 0.03) },
+          { type: 'cilantro', weight: 0.08 + random(-0.02, 0.03) }
+        ]);
+      }
+
+      if (elapsed < 35) {
+        return chooseWeighted([
+          { type: 'redApple', weight: 0.29 },
+          { type: 'greenApple', weight: 0.23 },
+          { type: 'pie', weight: 0.18 },
+          { type: 'paperPlane', weight: 0.11 },
+          { type: 'cilantro', weight: 0.10 },
+          { type: 'rock', weight: 0.09 }
+        ]);
+      }
+
+      if (elapsed < 45) {
+        const ramp = stageProgress(35, 45);
+        return chooseWeighted([
+          { type: 'redApple', weight: 0.25 - ramp * 0.03 },
+          { type: 'greenApple', weight: 0.20 - ramp * 0.02 },
+          { type: 'pie', weight: 0.16 - ramp * 0.02 },
+          { type: 'paperPlane', weight: 0.12 },
+          { type: 'cilantro', weight: 0.11 + ramp * 0.02 },
+          { type: 'rock', weight: 0.11 + ramp * 0.04 },
+          { type: 'tnt', weight: 0.05 + ramp * 0.03 }
+        ]);
+      }
+
+      if (elapsed < 60) {
+        const ramp = stageProgress(45, 60);
+        return chooseWeighted([
+          { type: 'redApple', weight: 0.21 - ramp * 0.03 },
+          { type: 'greenApple', weight: 0.17 - ramp * 0.03 },
+          { type: 'pie', weight: 0.14 - ramp * 0.02 },
+          { type: 'paperPlane', weight: 0.14 },
+          { type: 'cilantro', weight: 0.13 + ramp * 0.02 },
+          { type: 'rock', weight: 0.14 + ramp * 0.04 },
+          { type: 'tnt', weight: 0.07 + ramp * 0.02 }
+        ]);
+      }
+
+      const late = lateDifficulty();
       return chooseWeighted([
-        { type: 'rock', weight: 0.25 + random(-0.06, 0.08) },
-        { type: 'cilantro', weight: 0.26 + random(-0.06, 0.08) },
-        { type: 'paperPlane', weight: 0.25 + random(-0.06, 0.08) },
-        { type: 'tnt', weight: 0.24 + random(-0.06, 0.08) }
+        { type: 'redApple', weight: 0.13 - late * 0.03 },
+        { type: 'greenApple', weight: 0.11 - late * 0.02 },
+        { type: 'pie', weight: 0.09 - late * 0.02 },
+        { type: 'paperPlane', weight: 0.17 + late * 0.02 },
+        { type: 'cilantro', weight: 0.15 + late * 0.03 },
+        { type: 'rock', weight: 0.21 + late * 0.06 },
+        { type: 'tnt', weight: 0.14 + late * 0.03 }
       ]);
+    }
+
+    function tntExplosionCooldown() {
+      return lerp(8, 5, lateDifficulty());
+    }
+
+    function canThisTntExplode() {
+      if (elapsed < 60) return false;
+      if (elapsed - lastTntExplosionTime < tntExplosionCooldown()) return false;
+      // About 1 in 5 TNTs at first, increasing toward 1 in 3 near the end.
+      return Math.random() < lerp(0.20, 0.33, lateDifficulty());
     }
 
     function spawnFaller(forceType) {
       const type = forceType || chooseFallerType();
       const item = ITEMS[type];
-      const d = difficulty();
       const mid = midDifficulty();
       const late = lateDifficulty();
       const finalTen = finalTenDifficulty();
       const itemScale = clamp(scale, 0.72, 1.08);
       const radius = item.radius * itemScale;
       const edgePad = Math.max(48, 76 * itemScale);
-      const driftBoost = 1 + mid * 0.28 + late * 0.25;
+      const driftBoost = 1 + mid * 0.18 + late * 0.20;
       const wind = type === 'cilantro' || type === 'paperPlane'
-        ? random(-105, 105) * driftBoost
-        : random(-52, 52) * driftBoost;
+        ? random(-92, 92) * driftBoost
+        : random(-42, 42) * driftBoost;
 
-      const canExplode = type === 'tnt' && elapsed >= GAME_SECONDS - 15 && Math.random() < 0.34;
+      const canExplode = type === 'tnt' && canThisTntExplode();
       let spawnX = random(edgePad, width - edgePad);
 
-      // Keep hazards challenging but not unfair: avoid stacking too many bad items
-      // in the same dodge lane when they enter the screen.
+      // Keep hazards dodgeable: avoid stacking bad items into the same entrance lane.
       if (item.kind === 'hazard') {
-        const minGap = lerp(172, 112, late) * itemScale;
-        for (let attempt = 0; attempt < 8; attempt += 1) {
+        const minGap = lerp(190, 128, late) * itemScale;
+        for (let attempt = 0; attempt < 10; attempt += 1) {
           const candidate = random(edgePad, width - edgePad);
           const crowded = fallers.some((other) => (
             !other.caught &&
             ITEMS[other.type].kind === 'hazard' &&
-            other.y < height * 0.42 &&
+            other.y < height * 0.46 &&
             Math.abs(other.x - candidate) < minGap
           ));
           if (!crowded) {
@@ -995,28 +1066,47 @@
         }
       }
 
+      let baseVy = random(112, 158) + mid * 85 + late * 80 + random(-10, 24);
+      let rockGrowth = 0;
+      let maxVy = 470 + mid * 80 + late * 120;
+
+      if (type === 'rock') {
+        const slowRock = elapsed < 35;
+        const rockRamp = stageProgress(35, 80);
+        baseVy = slowRock
+          ? random(112, 146)
+          : random(138, 190) + rockRamp * 160 + finalTen * random(380, 520);
+        rockGrowth = slowRock
+          ? random(0.10, 0.22)
+          : random(0.32, 0.62) + rockRamp * 0.42 + finalTen * 1.25;
+        maxVy = slowRock
+          ? random(260, 330)
+          : random(430, 580) + rockRamp * 180 + finalTen * 560;
+      } else if (type === 'tnt') {
+        // Slow TNT when it first appears, then modestly faster later.
+        baseVy = random(96, 128) + stageProgress(45, 90) * 105;
+        maxVy = 340 + late * 150;
+      }
+
       fallers.push({
         type,
         kind: item.kind,
         x: spawnX,
         y: -70,
         radius,
-        // Easier opening, stronger midgame ramp, and a final-10 rock spike.
-        vy: type === 'rock'
-          ? random(128, 176) + mid * 145 + late * 110 + finalTen * random(300, 430) + random(-12, 34)
-          : random(118, 172) + mid * 130 + late * 90 + random(-14, 36),
+        vy: baseVy,
         vx: wind,
         spin: random(-2.2, 2.2),
         angle: random(0, Math.PI * 2),
         bob: random(0, Math.PI * 2),
         glidePhase: random(0, Math.PI * 2),
-        glideSpeed: random(4.2, 6.8) + late * 1.4,
-        glideAmplitude: random(150, 245) * clamp(scale, 0.72, 1.08),
-        rockGrowth: type === 'rock' ? random(0.55, 0.9) + mid * 0.45 + late * 0.45 + finalTen * 1.2 : 0,
-        maxVy: type === 'rock' ? random(470, 620) + mid * 120 + late * 160 + finalTen * 520 : 470 + mid * 95 + late * 115,
+        glideSpeed: random(4.0, 6.4) + late * 1.2,
+        glideAmplitude: random(130, 210) * itemScale,
+        rockGrowth,
+        maxVy,
         canExplode,
-        fuse: canExplode ? random(0.75, 2.25) : Infinity,
-        explosionRadius: random(108, 158) * itemScale,
+        fuse: canExplode ? random(1.0, 2.2) : Infinity,
+        explosionRadius: random(82, 120) * itemScale,
         caught: false
       });
     }
@@ -1050,14 +1140,22 @@
     function explodeTnt(tnt) {
       if (tnt.caught) return;
       tnt.caught = true;
-      burst(tnt.x, tnt.y, ITEMS.tnt.color, 26);
+      lastTntExplosionTime = elapsed;
+      explosions.push({
+        x: tnt.x,
+        y: tnt.y,
+        radius: tnt.explosionRadius,
+        life: 0.46,
+        maxLife: 0.46
+      });
+      burst(tnt.x, tnt.y, ITEMS.tnt.color, 24);
       burst(tnt.x, tnt.y, '#fff4c8', 18);
       floatText(tnt.x, tnt.y - tnt.radius, 'BOOM', '#bd3f42');
 
       fallers.forEach((other) => {
         if (other === tnt || other.caught) return;
         const distance = Math.hypot(other.x - tnt.x, other.y - tnt.y);
-        if (distance < tnt.explosionRadius + other.radius) {
+        if (distance < tnt.explosionRadius + other.radius * 0.4) {
           other.caught = true;
           burst(other.x, other.y, ITEMS[other.type].color, 8);
         }
@@ -1102,26 +1200,35 @@
         return;
       }
 
-      const d = difficulty();
       const mid = midDifficulty();
       const late = lateDifficulty();
       const finalTen = finalTenDifficulty();
       spawnTimer -= dt;
       if (spawnTimer <= 0) {
         spawnFaller();
-        const bonusSpawnChance = elapsed < 30 ? 0.035 + d * 0.04 : 0.08 + mid * 0.11 + late * 0.10;
-        if (Math.random() < bonusSpawnChance) {
-          spawnFaller();
-        }
-        if (elapsed >= 45 && Math.random() < 0.025 + late * 0.06) {
-          spawnFaller();
-        }
-        const pace = elapsed < 30
-          ? lerp(1.28, 1.06, d)
+
+        const extraChance = elapsed < 30
+          ? 0.015 + stageProgress(0, 30) * 0.035
           : elapsed < 45
-            ? lerp(1.05, 0.88, mid)
-            : lerp(0.86, 0.44, Math.max(mid, late));
-        spawnTimer = random(pace * 0.62, pace * (finalTen > 0 ? 1.02 : 1.22));
+            ? 0.055 + stageProgress(30, 45) * 0.055
+            : 0.10 + mid * 0.08 + late * 0.08;
+        if (Math.random() < extraChance) {
+          spawnFaller();
+        }
+
+        // Late game feels fuller, but still avoids impossible walls because spawnFaller spaces hazards.
+        if (elapsed >= 60 && Math.random() < 0.035 + late * 0.055) {
+          spawnFaller();
+        }
+
+        const pace = elapsed < 30
+          ? lerp(1.42, 1.14, stageProgress(0, 30))
+          : elapsed < 45
+            ? lerp(1.08, 0.88, stageProgress(30, 45))
+            : elapsed < 60
+              ? lerp(0.86, 0.70, stageProgress(45, 60))
+              : lerp(0.68, 0.46, late);
+        spawnTimer = random(pace * 0.68, pace * (finalTen > 0 ? 1.00 : 1.24));
       }
 
       let direction = heldDirection;
@@ -1204,6 +1311,11 @@
         particle.vy += 420 * dt;
       });
       particles = particles.filter((particle) => particle.life > 0);
+
+      explosions.forEach((explosion) => {
+        explosion.life -= dt;
+      });
+      explosions = explosions.filter((explosion) => explosion.life > 0);
 
       floaters.forEach((floater) => {
         floater.life -= dt;
@@ -2533,6 +2645,25 @@
       });
     }
 
+    function drawExplosions() {
+      explosions.forEach((explosion) => {
+        const progress = 1 - clamp(explosion.life / explosion.maxLife, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = 1 - progress;
+        ctx.lineWidth = Math.max(4, 10 * clamp(scale, 0.72, 1));
+        ctx.strokeStyle = '#fff4c8';
+        ctx.beginPath();
+        ctx.arc(explosion.x, explosion.y, explosion.radius * progress, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = (1 - progress) * 0.55;
+        ctx.fillStyle = '#ff9f45';
+        ctx.beginPath();
+        ctx.arc(explosion.x, explosion.y, explosion.radius * progress * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
     function drawParticles() {
       particles.forEach((particle) => {
         ctx.save();
@@ -2565,6 +2696,7 @@
       ctx.clearRect(0, 0, width, height);
       drawBackground();
       drawFallers();
+      drawExplosions();
       drawParticles();
       drawFloaters();
       drawBasket();
