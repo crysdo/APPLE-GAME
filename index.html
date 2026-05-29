@@ -431,7 +431,10 @@
 
     .mobile-pad {
       position: absolute;
-      inset: auto 18px 18px;
+      left: 18px;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
       z-index: 4;
       display: flex;
       justify-content: space-between;
@@ -446,7 +449,7 @@
       border: 4px solid #fff7df;
       border-radius: 999px;
       padding: 0;
-      background: #f5b94f;
+      background: rgba(245, 185, 79, 0.92);
       box-shadow: 0 6px 0 #7b4635;
     }
 
@@ -752,7 +755,7 @@
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       basket.y = height - Math.max(190, 220 * clamp(scale, 0.72, 1));
-      basket.x = clamp(basket.x, BASKET_WIDTH * scale * 0.5, width - BASKET_WIDTH * scale * 0.5);
+      basket.x = clamp(basket.x, BASKET_WIDTH * scale * 0.18, width - BASKET_WIDTH * scale * 0.18);
       makeScenery();
     }
 
@@ -997,7 +1000,7 @@
 
       const basketScale = clamp(scale, 0.74, 1);
       const basketW = BASKET_WIDTH * basketScale;
-      basket.x = clamp(basket.x, basketW * 0.5 + 12, width - basketW * 0.5 - 12);
+      basket.x = clamp(basket.x, basketW * 0.18, width - basketW * 0.18);
       basket.wobble = Math.max(0, basket.wobble - dt * 3.2);
 
       const catchY = basket.y + BASKET_HEIGHT * basketScale * 0.18;
