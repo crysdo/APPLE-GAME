@@ -896,36 +896,66 @@
     }
 
     function difficulty() {
-      return clamp(elapsed / GAME_SECONDS, 0, 1);
+      // Difficulty ramps up early so the game feels noticeably harder after the first 15 seconds.
+      return clamp(elapsed / 15, 0, 1);
+    }
+
+    function lateDifficulty() {
+      // A second slow ramp keeps the final stretch from feeling flat.
+      return clamp((elapsed - 15) / (GAME_SECONDS - 15), 0, 1);
+    }
+
+    function chooseWeighted(options) {
+      const total = options.reduce((sum, option) => sum + option.weight, 0);
+      let roll = Math.random() * total;
+      for (const option of options) {
+        roll -= option.weight;
+        if (roll <= 0) return option.type;
+      }
+      return options[options.length - 1].type;
     }
 
     function chooseFallerType() {
       const d = difficulty();
-      const goodChance = 0.88 - d * 0.18;
-      const roll = Math.random();
+      const late = lateDifficulty();
+      const afterOpening = elapsed >= 15;
 
-      if (roll < goodChance) {
-        const pick = Math.random();
-        if (pick < 0.48) return 'redApple';
-        if (pick < 0.82) return 'greenApple';
-        return 'pie';
+      // Starts treat-friendly, then flips to hazard-heavy by 15 seconds.
+      // Small random jitter keeps each playthrough from having the same scoring rhythm.
+      const goodChance = clamp(
+        (afterOpening ? 0.34 - late * 0.08 : 0.78 - d * 0.44) + random(-0.08, 0.08),
+        0.20,
+        0.82
+      );
+
+      if (Math.random() < goodChance) {
+        return chooseWeighted([
+          { type: 'redApple', weight: 0.44 + random(-0.08, 0.08) },
+          { type: 'greenApple', weight: 0.34 + random(-0.07, 0.07) },
+          { type: 'pie', weight: 0.22 + random(-0.05, 0.05) }
+        ]);
       }
 
-      const hazardPick = Math.random();
-      if (hazardPick < 0.28) return 'rock';
-      if (hazardPick < 0.56) return 'cilantro';
-      if (hazardPick < 0.80) return 'paperPlane';
-      return 'tnt';
+      return chooseWeighted([
+        { type: 'rock', weight: 0.25 + random(-0.06, 0.08) },
+        { type: 'cilantro', weight: 0.26 + random(-0.06, 0.08) },
+        { type: 'paperPlane', weight: 0.25 + random(-0.06, 0.08) },
+        { type: 'tnt', weight: 0.24 + random(-0.06, 0.08) }
+      ]);
     }
 
     function spawnFaller(forceType) {
       const type = forceType || chooseFallerType();
       const item = ITEMS[type];
       const d = difficulty();
+      const late = lateDifficulty();
       const itemScale = clamp(scale, 0.72, 1.08);
       const radius = item.radius * itemScale;
       const edgePad = Math.max(48, 76 * itemScale);
-      const wind = type === 'cilantro' || type === 'paperPlane' ? random(-70, 70) : random(-34, 34);
+      const driftBoost = 1 + d * 0.35 + late * 0.25;
+      const wind = type === 'cilantro' || type === 'paperPlane'
+        ? random(-105, 105) * driftBoost
+        : random(-52, 52) * driftBoost;
 
       fallers.push({
         type,
@@ -933,9 +963,10 @@
         x: random(edgePad, width - edgePad),
         y: -70,
         radius,
-        vy: random(86, 128) + d * 205 + random(-8, 24),
+        // Faster base speed plus wider randomness means no identical-feeling drop patterns.
+        vy: random(142, 205) + d * 190 + late * 95 + random(-18, 44),
         vx: wind,
-        spin: random(-1.6, 1.6),
+        spin: random(-2.2, 2.2),
         angle: random(0, Math.PI * 2),
         bob: random(0, Math.PI * 2),
         caught: false
@@ -1010,11 +1041,16 @@
       spawnTimer -= dt;
       if (spawnTimer <= 0) {
         spawnFaller();
-        if (Math.random() < 0.03 + d * 0.15) {
+        const late = lateDifficulty();
+        const bonusSpawnChance = elapsed >= 15 ? 0.18 + late * 0.20 : 0.06 + d * 0.18;
+        if (Math.random() < bonusSpawnChance) {
           spawnFaller();
         }
-        const pace = lerp(1.28, 0.42, d);
-        spawnTimer = random(pace * 0.68, pace * 1.2);
+        if (elapsed >= 15 && Math.random() < 0.05 + late * 0.08) {
+          spawnFaller();
+        }
+        const pace = elapsed >= 15 ? lerp(0.72, 0.34, late) : lerp(1.05, 0.72, d);
+        spawnTimer = random(pace * 0.58, pace * 1.18);
       }
 
       let direction = heldDirection;
