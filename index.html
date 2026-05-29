@@ -500,7 +500,9 @@
       <div class="panel">
         <h1>Gege's Picnic</h1>
         <div class="credit">a mini fan-made game by <a href="https://www.instagram.com/studiocrysdo/" target="_blank" rel="noopener">@studiocrysdo</a></div>
-        <p>Fill the basket before sundown.</p>
+        <p><strong>🍎 Catch only apple treats!</strong></p>
+        <p>Apples and apple pie give you points.</p>
+        <p>Avoid cilantro, paper planes, rocks, and TNT.</p>
         <div class="actions">
           <button id="startButton" type="button">Start</button>
         </div>
@@ -561,6 +563,25 @@
     const basketImage = new Image();
     basketImage.src = 'picnic-basket.png';
     basketImage.addEventListener('load', () => draw());
+
+    const redAppleImage = new Image();
+    redAppleImage.src = 'apple-red.png';
+
+    const greenAppleImage = new Image();
+    greenAppleImage.src = 'apple-green.png';
+
+    const pieImage = new Image();
+    pieImage.src = 'apple-pie.png';
+
+    const cilantroImage = new Image();
+    cilantroImage.src = 'cilantro.png';
+
+    const paperPlaneImage = new Image();
+    paperPlaneImage.src = 'paper-plane.png';
+
+    [redAppleImage, greenAppleImage, pieImage, cilantroImage, paperPlaneImage].forEach((image) => {
+      image.addEventListener('load', () => draw());
+    });
     const shell = document.querySelector('.game-shell');
     const scoreEl = document.getElementById('score');
     const timerEl = document.getElementById('timer');
@@ -589,7 +610,8 @@
       pie: 30,
       rock: -20,
       tnt: -20,
-      cilantro: -20
+      cilantro: -20,
+      paperPlane: -20
     };
 
     const ITEMS = {
@@ -598,7 +620,8 @@
       pie: { kind: 'good', radius: 32, label: '+30', color: '#d69a44' },
       rock: { kind: 'hazard', radius: 28, label: '-20', color: '#8d9284' },
       tnt: { kind: 'hazard', radius: 31, label: '-20', color: '#bd3f42' },
-      cilantro: { kind: 'hazard', radius: 30, label: '-20', color: '#6f9861' }
+      cilantro: { kind: 'hazard', radius: 30, label: '-20', color: '#6f9861' },
+      paperPlane: { kind: 'hazard', radius: 30, label: '-20', color: '#aeb8c8' }
     };
 
     let width = 1180;
@@ -808,8 +831,9 @@
       }
 
       const hazardPick = Math.random();
-      if (hazardPick < 0.4) return 'rock';
-      if (hazardPick < 0.72) return 'cilantro';
+      if (hazardPick < 0.28) return 'rock';
+      if (hazardPick < 0.52) return 'cilantro';
+      if (hazardPick < 0.76) return 'paperPlane';
       return 'tnt';
     }
 
@@ -820,7 +844,7 @@
       const itemScale = clamp(scale, 0.72, 1.08);
       const radius = item.radius * itemScale;
       const edgePad = Math.max(48, 76 * itemScale);
-      const wind = type === 'cilantro' ? random(-70, 70) : random(-34, 34);
+      const wind = type === 'cilantro' || type === 'paperPlane' ? random(-70, 70) : random(-34, 34);
 
       fallers.push({
         type,
@@ -934,7 +958,7 @@
         faller.angle += faller.spin * dt;
         faller.bob += dt * 3.2;
         faller.y += faller.vy * dt;
-        faller.x += (faller.vx + Math.sin(faller.bob) * (faller.type === 'cilantro' ? 52 : 18)) * dt;
+        faller.x += (faller.vx + Math.sin(faller.bob) * (faller.type === 'cilantro' || faller.type === 'paperPlane' ? 52 : 18)) * dt;
 
         if (faller.x < faller.radius || faller.x > width - faller.radius) {
           faller.vx *= -0.62;
@@ -2023,36 +2047,28 @@
     }
 
     function drawApple(x, y, r, angle, color) {
+      const image = color === '#c94b55' ? redAppleImage : greenAppleImage;
+
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(angle * 0.16);
+      ctx.rotate(angle * 0.12);
 
-      ctx.strokeStyle = '#fff7df';
-      ctx.lineWidth = r * 0.22;
-      ctx.fillStyle = color;
-      applePath(r);
-      ctx.stroke();
-      ctx.fill();
+      const size = r * 2.7;
 
-      ctx.fillStyle = color === '#c94b55' ? '#e87980' : '#b8cf68';
-      ctx.globalAlpha = 0.48;
-      ctx.beginPath();
-      ctx.ellipse(-r * 0.34, -r * 0.26, r * 0.24, r * 0.34, 0.62, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      if (image.complete && image.naturalWidth) {
+        ctx.shadowColor = 'rgba(82, 63, 39, 0.16)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 4;
+        ctx.drawImage(image, -size / 2, -size / 2, size, size);
+      } else {
+        ctx.strokeStyle = '#fff7df';
+        ctx.lineWidth = r * 0.22;
+        ctx.fillStyle = color;
+        applePath(r);
+        ctx.stroke();
+        ctx.fill();
+      }
 
-      ctx.strokeStyle = '#7b4635';
-      ctx.lineWidth = r * 0.14;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(r * 0.08, -r * 0.75);
-      ctx.quadraticCurveTo(r * 0.3, -r * 1.08, r * 0.18, -r * 1.34);
-      ctx.stroke();
-
-      ctx.fillStyle = '#739b59';
-      ctx.beginPath();
-      ctx.ellipse(r * 0.43, -r * 0.94, r * 0.36, r * 0.16, -0.48, 0, Math.PI * 2);
-      ctx.fill();
       ctx.restore();
     }
 
@@ -2068,39 +2084,25 @@
     function drawPie(x, y, r, angle) {
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(angle * 0.18);
+      ctx.rotate(angle * 0.08);
 
-      ctx.strokeStyle = '#fff7df';
-      ctx.lineWidth = r * 0.22;
-      ctx.fillStyle = '#d69a44';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, r * 1.08, r * 0.82, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fill();
+      const size = r * 3.0;
 
-      ctx.fillStyle = '#fbd3ac';
-      ctx.beginPath();
-      ctx.ellipse(0, -r * 0.04, r * 0.86, r * 0.58, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#bf7c36';
-      ctx.lineWidth = r * 0.12;
-      for (let i = -2; i <= 2; i += 1) {
+      if (pieImage.complete && pieImage.naturalWidth) {
+        ctx.shadowColor = 'rgba(82, 63, 39, 0.16)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 4;
+        ctx.drawImage(pieImage, -size / 2, -size / 2, size, size);
+      } else {
+        ctx.strokeStyle = '#fff7df';
+        ctx.lineWidth = r * 0.22;
+        ctx.fillStyle = '#d69a44';
         ctx.beginPath();
-        ctx.moveTo(-r * 0.72, i * r * 0.22);
-        ctx.lineTo(r * 0.72, i * r * 0.22 + r * 0.1);
+        ctx.ellipse(0, 0, r * 1.08, r * 0.82, 0, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(i * r * 0.25, -r * 0.54);
-        ctx.lineTo(i * r * 0.25 - r * 0.12, r * 0.54);
-        ctx.stroke();
+        ctx.fill();
       }
 
-      ctx.fillStyle = '#b02c31';
-      ctx.beginPath();
-      ctx.arc(-r * 0.42, r * 0.06, r * 0.13, 0, Math.PI * 2);
-      ctx.arc(r * 0.3, -r * 0.14, r * 0.11, 0, Math.PI * 2);
-      ctx.fill();
       ctx.restore();
     }
 
@@ -2171,41 +2173,58 @@
     function drawCilantro(x, y, r, angle) {
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(angle * 0.28);
-      ctx.strokeStyle = '#fff7df';
-      ctx.lineWidth = r * 0.17;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.62, r * 0.56);
-      ctx.quadraticCurveTo(0, -r * 0.32, r * 0.62, r * 0.56);
-      ctx.stroke();
+      ctx.rotate(angle * 0.08);
 
-      ctx.strokeStyle = '#557f4b';
-      ctx.lineWidth = r * 0.08;
-      for (let i = -2; i <= 2; i += 1) {
+      const size = r * 3.4;
+
+      if (cilantroImage.complete && cilantroImage.naturalWidth) {
+        ctx.shadowColor = 'rgba(82, 63, 39, 0.14)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 4;
+        ctx.drawImage(cilantroImage, -size / 2, -size / 2, size, size);
+      } else {
+        ctx.strokeStyle = '#fff7df';
+        ctx.lineWidth = r * 0.17;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(0, r * 0.62);
-        ctx.quadraticCurveTo(i * r * 0.18, r * 0.08, i * r * 0.28, -r * 0.42);
+        ctx.moveTo(-r * 0.62, r * 0.56);
+        ctx.quadraticCurveTo(0, -r * 0.32, r * 0.62, r * 0.56);
         ctx.stroke();
-      }
 
-      ctx.fillStyle = '#6f9861';
-      for (let i = -3; i <= 3; i += 1) {
-        const lx = i * r * 0.22;
-        const ly = -r * (0.28 + (Math.abs(i) % 3) * 0.12);
+        ctx.fillStyle = '#6f9861';
         ctx.beginPath();
-        ctx.arc(lx, ly, r * 0.22, 0, Math.PI * 2);
-        ctx.arc(lx + r * 0.16, ly + r * 0.08, r * 0.18, 0, Math.PI * 2);
-        ctx.arc(lx - r * 0.15, ly + r * 0.08, r * 0.18, 0, Math.PI * 2);
+        ctx.arc(0, -r * 0.25, r * 0.55, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.strokeStyle = '#b02c31';
-      ctx.lineWidth = r * 0.12;
-      ctx.beginPath();
-      ctx.moveTo(-r * 0.28, r * 0.46);
-      ctx.lineTo(r * 0.28, r * 0.46);
-      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPaperPlane(x, y, r, angle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle * 0.12);
+
+      const size = r * 3.1;
+
+      if (paperPlaneImage.complete && paperPlaneImage.naturalWidth) {
+        ctx.shadowColor = 'rgba(82, 63, 39, 0.14)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 4;
+        ctx.drawImage(paperPlaneImage, -size / 2, -size / 2, size, size);
+      } else {
+        ctx.fillStyle = '#f2f1eb';
+        ctx.strokeStyle = '#fff7df';
+        ctx.lineWidth = r * 0.12;
+        ctx.beginPath();
+        ctx.moveTo(-r, -r * 0.2);
+        ctx.lineTo(r, -r * 0.62);
+        ctx.lineTo(r * 0.18, r * 0.85);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fill();
+      }
+
       ctx.restore();
     }
 
@@ -2221,6 +2240,8 @@
           drawRock(faller.x, faller.y, faller.radius, faller.angle);
         } else if (faller.type === 'tnt') {
           drawTnt(faller.x, faller.y, faller.radius, faller.angle);
+        } else if (faller.type === 'paperPlane') {
+          drawPaperPlane(faller.x, faller.y, faller.radius, faller.angle);
         } else {
           drawCilantro(faller.x, faller.y, faller.radius, faller.angle);
         }
