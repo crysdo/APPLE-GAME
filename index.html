@@ -957,10 +957,32 @@
         ? random(-105, 105) * driftBoost
         : random(-52, 52) * driftBoost;
 
+      const canExplode = type === 'tnt' && elapsed >= GAME_SECONDS - 15 && Math.random() < 0.34;
+      let spawnX = random(edgePad, width - edgePad);
+
+      // Keep hazards challenging but not unfair: avoid stacking too many bad items
+      // in the same dodge lane when they enter the screen.
+      if (item.kind === 'hazard') {
+        const minGap = lerp(172, 112, late) * itemScale;
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          const candidate = random(edgePad, width - edgePad);
+          const crowded = fallers.some((other) => (
+            !other.caught &&
+            ITEMS[other.type].kind === 'hazard' &&
+            other.y < height * 0.42 &&
+            Math.abs(other.x - candidate) < minGap
+          ));
+          if (!crowded) {
+            spawnX = candidate;
+            break;
+          }
+        }
+      }
+
       fallers.push({
         type,
         kind: item.kind,
-        x: random(edgePad, width - edgePad),
+        x: spawnX,
         y: -70,
         radius,
         // Faster base speed plus wider randomness means no identical-feeling drop patterns.
@@ -969,6 +991,14 @@
         spin: random(-2.2, 2.2),
         angle: random(0, Math.PI * 2),
         bob: random(0, Math.PI * 2),
+        glidePhase: random(0, Math.PI * 2),
+        glideSpeed: random(4.2, 6.8) + late * 1.4,
+        glideAmplitude: random(150, 245) * clamp(scale, 0.72, 1.08),
+        rockGrowth: type === 'rock' ? random(0.95, 1.35) + late * 0.55 : 0,
+        maxVy: type === 'rock' ? random(620, 780) + late * 130 : 520 + late * 115,
+        canExplode,
+        fuse: canExplode ? random(0.75, 2.25) : Infinity,
+        explosionRadius: random(108, 158) * itemScale,
         caught: false
       });
     }
@@ -996,6 +1026,23 @@
         color,
         life: 0.9,
         maxLife: 0.9
+      });
+    }
+
+    function explodeTnt(tnt) {
+      if (tnt.caught) return;
+      tnt.caught = true;
+      burst(tnt.x, tnt.y, ITEMS.tnt.color, 26);
+      burst(tnt.x, tnt.y, '#fff4c8', 18);
+      floatText(tnt.x, tnt.y - tnt.radius, 'BOOM', '#bd3f42');
+
+      fallers.forEach((other) => {
+        if (other === tnt || other.caught) return;
+        const distance = Math.hypot(other.x - tnt.x, other.y - tnt.y);
+        if (distance < tnt.explosionRadius + other.radius) {
+          other.caught = true;
+          burst(other.x, other.y, ITEMS[other.type].color, 8);
+        }
       });
     }
 
@@ -1042,14 +1089,14 @@
       if (spawnTimer <= 0) {
         spawnFaller();
         const late = lateDifficulty();
-        const bonusSpawnChance = elapsed >= 15 ? 0.18 + late * 0.20 : 0.06 + d * 0.18;
+        const bonusSpawnChance = elapsed >= 15 ? 0.14 + late * 0.16 : 0.05 + d * 0.15;
         if (Math.random() < bonusSpawnChance) {
           spawnFaller();
         }
-        if (elapsed >= 15 && Math.random() < 0.05 + late * 0.08) {
+        if (elapsed >= 15 && Math.random() < 0.035 + late * 0.055) {
           spawnFaller();
         }
-        const pace = elapsed >= 15 ? lerp(0.72, 0.34, late) : lerp(1.05, 0.72, d);
+        const pace = elapsed >= 15 ? lerp(0.78, 0.42, late) : lerp(1.08, 0.76, d);
         spawnTimer = random(pace * 0.58, pace * 1.18);
       }
 
@@ -1068,25 +1115,56 @@
       basket.x = clamp(basket.x, basketW * 0.18, width - basketW * 0.18);
       basket.wobble = Math.max(0, basket.wobble - dt * 3.2);
 
-      const catchY = basket.y + BASKET_HEIGHT * basketScale * 0.18;
-      const catchHalf = basketW * 0.42;
+      // Collision is intentionally based on the lower basket bowl, not the handle.
+      // This keeps bad items dodgeable even when they visually pass through the handle area.
+      const bowlTop = basket.y + BASKET_HEIGHT * basketScale * 0.40;
+      const bowlBottom = basket.y + BASKET_HEIGHT * basketScale * 0.82;
+      const goodCatchHalf = basketW * 0.39;
+      const hazardCatchHalf = basketW * 0.30;
 
       fallers.forEach((faller) => {
         faller.angle += faller.spin * dt;
         faller.bob += dt * 3.2;
+
+        if (faller.type === 'rock') {
+          // Rocks keep accelerating as they fall, making them feel heavier and more dangerous.
+          faller.vy = Math.min(faller.maxVy, faller.vy * (1 + faller.rockGrowth * dt));
+        }
+
         faller.y += faller.vy * dt;
-        faller.x += (faller.vx + Math.sin(faller.bob) * (faller.type === 'cilantro' || faller.type === 'paperPlane' ? 52 : 18)) * dt;
+
+        if (faller.type === 'paperPlane') {
+          // Paper crane / paper-plane movement: wide, unpredictable side-to-side gliding.
+          faller.glidePhase += faller.glideSpeed * dt;
+          const zigzag = Math.sin(faller.glidePhase) * faller.glideAmplitude;
+          const flutter = Math.sin(faller.glidePhase * 2.7) * 34 * clamp(scale, 0.72, 1.08);
+          faller.x += (faller.vx + zigzag + flutter) * dt;
+          faller.angle = Math.sin(faller.glidePhase) * 0.55;
+        } else {
+          faller.x += (faller.vx + Math.sin(faller.bob) * (faller.type === 'cilantro' ? 52 : 18)) * dt;
+        }
+
+        if (faller.type === 'tnt' && faller.canExplode) {
+          faller.fuse -= dt;
+          if (faller.fuse <= 0 && faller.y > 35 && faller.y < height - 120) {
+            explodeTnt(faller);
+          }
+        }
 
         if (faller.x < faller.radius || faller.x > width - faller.radius) {
           faller.vx *= -0.62;
           faller.x = clamp(faller.x, faller.radius, width - faller.radius);
+          if (faller.type === 'paperPlane') faller.glidePhase += Math.PI * 0.65;
         }
 
+        const isGood = faller.kind === 'good';
+        const collisionHalf = isGood ? goodCatchHalf : hazardCatchHalf;
+        const collisionRadius = faller.radius * (isGood ? 0.58 : 0.34);
         if (
           !faller.caught &&
-          faller.y + faller.radius > catchY - 12 * basketScale &&
-          faller.y - faller.radius < catchY + 42 * basketScale &&
-          Math.abs(faller.x - basket.x) < catchHalf + faller.radius * 0.32
+          faller.y + collisionRadius > bowlTop &&
+          faller.y - collisionRadius < bowlBottom &&
+          Math.abs(faller.x - basket.x) < collisionHalf + collisionRadius
         ) {
           catchFaller(faller);
         }
