@@ -730,6 +730,8 @@
     let pointerX = 0;
     let endReason = 'time';
     let stats = { treats: 0, bumps: 0 };
+      lastExplosionTime = -999;
+    let lastExplosionTime = -999;
 
     const basket = {
       x: width / 2,
@@ -994,7 +996,17 @@
         ? random(-105, 105) * driftBoost
         : random(-52, 52) * driftBoost;
 
-      const canExplode = type === 'tnt' && elapsed >= GAME_SECONDS - 15 && Math.random() < 0.34;
+      let explosionChance = 0;
+
+      if (elapsed >= 30 && elapsed < 60) {
+        explosionChance = 0.20;
+      } else if (elapsed >= 60 && elapsed < 75) {
+        explosionChance = 0.25;
+      } else if (elapsed >= 75) {
+        explosionChance = 0.33;
+      }
+
+      const canExplode = type === 'tnt' && Math.random() < explosionChance;
       let spawnX = random(edgePad, width - edgePad);
 
       // Keep hazards challenging but not unfair: avoid stacking too many bad items
@@ -1182,8 +1194,24 @@
         }
 
         if (faller.type === 'tnt' && faller.canExplode) {
+
+          let cooldown = 8;
+
+          if (elapsed >= 60 && elapsed < 75) {
+            cooldown = 6;
+          } else if (elapsed >= 75) {
+            cooldown = 5;
+          }
+
           faller.fuse -= dt;
-          if (faller.fuse <= 0 && faller.y > 35 && faller.y < height - 120) {
+
+          if (
+            faller.fuse <= 0 &&
+            elapsed - lastExplosionTime >= cooldown &&
+            faller.y > 35 &&
+            faller.y < height - 120
+          ) {
+            lastExplosionTime = elapsed;
             explodeTnt(faller);
           }
         }
@@ -2536,6 +2564,15 @@
         } else if (faller.type === 'rock') {
           drawRock(faller.x, faller.y, faller.radius, faller.angle);
         } else if (faller.type === 'tnt') {
+          if (faller.canExplode && faller.fuse < 1) {
+            ctx.save();
+            ctx.globalAlpha = 0.4 + Math.sin(performance.now() * 0.02) * 0.4;
+            ctx.beginPath();
+            ctx.arc(faller.x, faller.y, faller.radius * 1.4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ff4444';
+            ctx.fill();
+            ctx.restore();
+          }
           drawTnt(faller.x, faller.y, faller.radius, faller.angle);
         } else if (faller.type === 'paperPlane') {
           drawPaperPlane(faller.x, faller.y, faller.radius, faller.angle);
