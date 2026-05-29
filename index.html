@@ -8,6 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Chewy&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: "Fluttershy";
+      src: url("Fluttershy-Regular.woff2") format("woff2");
+      font-weight: normal;
+      font-style: normal;
+    }
+
     :root {
       color-scheme: light;
       --rose: #f5b94f;
@@ -428,15 +435,7 @@
     }
 
     .mobile-pad {
-      position: absolute;
-      left: 18px;
-      right: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 4;
-      display: flex;
-      justify-content: space-between;
-      pointer-events: none;
+      display: none !important;
     }
 
     .move-btn {
@@ -494,8 +493,8 @@
     }
     .title-character {
       position: absolute;
-      right: 8px;
-      top: -18px;
+      right: 18px;
+      top: 38px;
       width: 96px;
       height: 96px;
       object-fit: contain;
@@ -506,6 +505,17 @@
     }
 
 
+
+    .controls-hint {
+      margin-top: 8px;
+      color: #ffffff;
+      font-size: 24px;
+      line-height: 1.2;
+      text-align: center;
+      font-family: "Fluttershy", sans-serif;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.35);
+      pointer-events: none;
+    }
 </style>
 </head>
 <body>
