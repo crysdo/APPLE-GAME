@@ -10,8 +10,8 @@
   <style>
     :root {
       color-scheme: light;
-      --rose: #f06f8f;
-      --berry: #bf5369;
+      --rose: #f5b94f;
+      --berry: #d99a35;
       --moss: #2f6958;
       --leaf: #8fcc76;
       --mint: #b8f0e7;
@@ -170,54 +170,43 @@
 
     .panel {
       position: relative;
-      width: min(520px, calc(100vw - 38px));
+      width: min(560px, calc(100vw - 38px));
       overflow: visible;
-      border: 4px solid #f1c461;
-      border-radius: 34px;
+      border: 4px solid #8fb546;
+      border-radius: 38px;
       background:
-        radial-gradient(circle at 12% 22%, rgba(251, 211, 172, 0.45) 0 46px, transparent 47px),
-        radial-gradient(circle at 84% 76%, rgba(144, 177, 62, 0.16) 0 62px, transparent 64px),
-        linear-gradient(#fffaf0, #fff4d7);
+        radial-gradient(circle at 91% 34%, rgba(255, 230, 170, 0.38) 0 34px, transparent 35px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 12%, transparent 12% 24%, rgba(255, 255, 255, 0.14) 24% 36%, transparent 36% 48%, rgba(255, 255, 255, 0.12) 48% 60%, transparent 60%),
+        linear-gradient(135deg, #c7eb6b 0%, #e7f4a2 56%, #fff1bd 100%);
       box-shadow:
-        0 9px 0 rgba(123, 70, 53, 0.22),
-        0 18px 0 rgba(16, 79, 62, 0.16),
-        inset 0 4px 0 rgba(255, 255, 255, 0.78),
-        inset 0 -7px 0 rgba(241, 196, 97, 0.14);
-      padding: 38px 30px 28px;
+        0 9px 0 rgba(85, 126, 47, 0.26),
+        0 18px 0 rgba(16, 79, 62, 0.12),
+        inset 0 4px 0 rgba(255, 255, 255, 0.72),
+        inset 0 -7px 0 rgba(123, 171, 54, 0.16);
+      padding: 34px 34px 28px;
       text-align: center;
     }
 
     .panel::before {
-      content: "picnic note ✿";
+      content: "caleb messaged you";
       position: absolute;
-      left: 34px;
-      top: -23px;
-      min-width: 128px;
-      height: 42px;
+      left: 28px;
+      top: -21px;
+      min-width: 154px;
+      height: 38px;
       display: grid;
       place-items: center;
       padding: 0 18px;
-      border: 3px solid #e2ad44;
+      border: 3px solid #8fb546;
       border-radius: 999px;
-      background: #ffd56f;
-      color: #7b4635;
-      font-size: 15px;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.22), transparent 34%),
+        #cfe970;
+      color: #d9444b;
+      font-size: 12px;
       font-weight: 950;
-      letter-spacing: 0;
-      box-shadow: 0 4px 0 rgba(123, 70, 53, 0.16);
-    }
-
-    .panel::after {
-      content: "";
-      position: absolute;
-      right: 38px;
-      top: -9px;
-      width: 42px;
-      height: 28px;
-      border-top: 4px solid #f1c461;
-      border-right: 4px solid #f1c461;
-      border-radius: 0 24px 0 0;
-      background: #fffaf0;
+      letter-spacing: 0.2px;
+      box-shadow: 0 4px 0 rgba(78, 126, 55, 0.18);
     }
 
     .panel > * {
@@ -227,16 +216,17 @@
 
     .panel h1,
     .panel h2 {
-      margin: 34px 0 0;
-      color: #ff6f91;
-      font-size: clamp(38px, 9vw, 62px);
-      font-family: "Chewy", "Baloo 2", "Fredoka", "Arial Rounded MT Bold", ui-rounded, sans-serif;
-      line-height: 1;
-      letter-spacing: 0;
+      margin: 30px 0 0;
+      color: #8f3742;
+      font-size: clamp(34px, 7vw, 54px);
+      font-family: "Fredoka", "Baloo 2", "Chewy", "Arial Rounded MT Bold", ui-rounded, sans-serif;
+      font-weight: 950;
+      line-height: 0.95;
+      letter-spacing: 0.3px;
       text-shadow:
-        0 3px 0 #fff8df,
-        0 7px 0 rgba(255, 197, 91, 0.28),
-        0 10px 16px rgba(154, 104, 66, 0.18);
+        0 2px 0 #fff8df,
+        0 5px 0 rgba(255, 209, 103, 0.30),
+        0 9px 14px rgba(154, 104, 66, 0.16);
     }
 
     .panel h2 {
@@ -281,9 +271,10 @@
 
     .credit {
       margin-top: 8px;
-      color: #7b4635;
-      font-size: 15px;
+      color: #8f3742;
+      font-size: 13px;
       font-weight: 900;
+      text-align: center;
     }
 
     .credit a {
@@ -296,6 +287,46 @@
     .credit a:hover {
       color: #0d7e48;
       border-color: rgba(13, 126, 72, 0.34);
+    }
+
+    .start-message {
+      margin: 10px auto 18px;
+      color: #8f3742;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.32;
+      max-width: 36ch;
+      text-align: center;
+    }
+
+    .start-panel {
+      min-height: 286px;
+    }
+
+    .start-panel .actions {
+      justify-content: center;
+    }
+
+    .title-star {
+      position: absolute;
+      left: 64px;
+      top: 124px;
+      width: 46px;
+      height: 46px;
+      background: #fff9e8;
+      clip-path: polygon(50% 0%, 61% 34%, 98% 35%, 68% 56%, 79% 91%, 50% 70%, 21% 91%, 32% 56%, 2% 35%, 39% 34%);
+      filter: drop-shadow(0 3px 0 rgba(143, 55, 66, 0.12));
+      opacity: 0.95;
+    }
+
+
+    .tiny-star {
+      position: absolute;
+      right: 28px;
+      top: 44px;
+      color: #f2a32f;
+      font-size: 24px;
+      transform: rotate(15deg);
     }
 
     .end-panel p {
@@ -357,7 +388,7 @@
       min-width: 128px;
       min-height: 50px;
       padding: 0 18px;
-      background: #ff6f91;
+      background: #f5b94f;
       color: #fff9dc;
       box-shadow:
         0 7px 0 #7b4635,
@@ -369,7 +400,7 @@
     }
 
     button:hover {
-      background: #ff83a2;
+      background: #ffc867;
     }
 
     button:active {
@@ -415,7 +446,7 @@
       border: 4px solid #fff7df;
       border-radius: 999px;
       padding: 0;
-      background: #ff6f91;
+      background: #f5b94f;
       box-shadow: 0 6px 0 #7b4635;
     }
 
@@ -460,7 +491,21 @@
         padding: 24px 18px 20px;
       }
     }
-  </style>
+  
+    .title-apple {
+      position: absolute;
+      right: 34px;
+      top: 8px;
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      z-index: 3;
+      background: transparent;
+    }
+
+</style>
 </head>
 <body>
   <main class="game-shell" aria-label="Gege's Picnic game">
@@ -497,10 +542,13 @@
     </section>
 
     <div id="startOverlay" class="overlay">
-      <div class="panel">
+      <div class="panel start-panel">
+        <span class="title-star" aria-hidden="true"></span>
+                <span class="tiny-star" aria-hidden="true">★</span>
+                        <img class="title-apple" src="sunny-apple-caleb-apple.gif" alt="" aria-hidden="true">
         <h1>Gege's Picnic</h1>
         <div class="credit">a mini fan-made game by <a href="https://www.instagram.com/studiocrysdo/" target="_blank" rel="noopener">@studiocrysdo</a></div>
-        <p><strong>Catch only apple treats!</strong><br>Catch apples and apple pie to earn points.<br>Avoid cilantro, paper planes, rocks, and TNT.</p>
+        <p class="start-message">Help gege prep for our picnic date by gathering only the apple treats!</p>
         <div class="actions">
           <button id="startButton" type="button">Start</button>
         </div>
@@ -722,7 +770,7 @@
           x: (53 + i * 117) % width,
           y: height * random(0.68, 0.92),
           s: random(0.52, 1.05),
-          color: ['#f2cad0', '#fff7df', '#e0b15d', '#9bbf6f'][i % 4]
+          color: ['#ffe08a', '#fff7df', '#e0b15d', '#9bbf6f'][i % 4]
         });
       }
 
@@ -1666,7 +1714,7 @@
       ctx.restore();
 
       // Cottagecore flowers and grass details.
-      const flowerColors = ['#f7acd0', '#ffd7e4', '#fff3b0', '#f8c5db'];
+      const flowerColors = ['#ffe08a', '#fff0b8', '#fff3b0', '#ffe3a3'];
       for (let i = 0; i < 28; i += 1) {
         const x = (42 + i * 83) % width;
         const y = height * (0.66 + (i % 8) * 0.036);
