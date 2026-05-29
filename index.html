@@ -896,13 +896,23 @@
     }
 
     function difficulty() {
-      // Difficulty ramps up early so the game feels noticeably harder after the first 15 seconds.
-      return clamp(elapsed / 15, 0, 1);
+      // Gentle full-game ramp: the first 30-45 seconds stay playable, then the pressure rises.
+      return clamp(elapsed / GAME_SECONDS, 0, 1);
+    }
+
+    function midDifficulty() {
+      // Starts after the easier opening so the middle game gets more active without feeling unfair.
+      return clamp((elapsed - 35) / 35, 0, 1);
     }
 
     function lateDifficulty() {
-      // A second slow ramp keeps the final stretch from feeling flat.
-      return clamp((elapsed - 15) / (GAME_SECONDS - 15), 0, 1);
+      // Final stretch pressure, especially noticeable in the last 20 seconds.
+      return clamp((elapsed - 70) / 20, 0, 1);
+    }
+
+    function finalTenDifficulty() {
+      // Last 10 seconds are the chaos window for very fast rocks.
+      return clamp((GAME_SECONDS - timeLeft) - 80, 0, 10) / 10;
     }
 
     function chooseWeighted(options) {
@@ -917,14 +927,18 @@
 
     function chooseFallerType() {
       const d = difficulty();
+      const mid = midDifficulty();
       const late = lateDifficulty();
-      const afterOpening = elapsed >= 15;
 
-      // Starts treat-friendly, then flips to hazard-heavy by 15 seconds.
-      // Small random jitter keeps each playthrough from having the same scoring rhythm.
+      // First 30-45 seconds are more forgiving. After that, hazards gradually take over.
+      // Random jitter keeps each playthrough from having the same scoring rhythm.
       const goodChance = clamp(
-        (afterOpening ? 0.34 - late * 0.08 : 0.78 - d * 0.44) + random(-0.08, 0.08),
-        0.20,
+        (elapsed < 30
+          ? 0.78 - d * 0.08
+          : elapsed < 45
+            ? 0.66 - mid * 0.12
+            : 0.46 - mid * 0.16 - late * 0.08) + random(-0.075, 0.075),
+        0.22,
         0.82
       );
 
@@ -948,11 +962,13 @@
       const type = forceType || chooseFallerType();
       const item = ITEMS[type];
       const d = difficulty();
+      const mid = midDifficulty();
       const late = lateDifficulty();
+      const finalTen = finalTenDifficulty();
       const itemScale = clamp(scale, 0.72, 1.08);
       const radius = item.radius * itemScale;
       const edgePad = Math.max(48, 76 * itemScale);
-      const driftBoost = 1 + d * 0.35 + late * 0.25;
+      const driftBoost = 1 + mid * 0.28 + late * 0.25;
       const wind = type === 'cilantro' || type === 'paperPlane'
         ? random(-105, 105) * driftBoost
         : random(-52, 52) * driftBoost;
@@ -985,8 +1001,10 @@
         x: spawnX,
         y: -70,
         radius,
-        // Faster base speed plus wider randomness means no identical-feeling drop patterns.
-        vy: random(142, 205) + d * 190 + late * 95 + random(-18, 44),
+        // Easier opening, stronger midgame ramp, and a final-10 rock spike.
+        vy: type === 'rock'
+          ? random(128, 176) + mid * 145 + late * 110 + finalTen * random(300, 430) + random(-12, 34)
+          : random(118, 172) + mid * 130 + late * 90 + random(-14, 36),
         vx: wind,
         spin: random(-2.2, 2.2),
         angle: random(0, Math.PI * 2),
@@ -994,8 +1012,8 @@
         glidePhase: random(0, Math.PI * 2),
         glideSpeed: random(4.2, 6.8) + late * 1.4,
         glideAmplitude: random(150, 245) * clamp(scale, 0.72, 1.08),
-        rockGrowth: type === 'rock' ? random(0.95, 1.35) + late * 0.55 : 0,
-        maxVy: type === 'rock' ? random(620, 780) + late * 130 : 520 + late * 115,
+        rockGrowth: type === 'rock' ? random(0.55, 0.9) + mid * 0.45 + late * 0.45 + finalTen * 1.2 : 0,
+        maxVy: type === 'rock' ? random(470, 620) + mid * 120 + late * 160 + finalTen * 520 : 470 + mid * 95 + late * 115,
         canExplode,
         fuse: canExplode ? random(0.75, 2.25) : Infinity,
         explosionRadius: random(108, 158) * itemScale,
@@ -1085,19 +1103,25 @@
       }
 
       const d = difficulty();
+      const mid = midDifficulty();
+      const late = lateDifficulty();
+      const finalTen = finalTenDifficulty();
       spawnTimer -= dt;
       if (spawnTimer <= 0) {
         spawnFaller();
-        const late = lateDifficulty();
-        const bonusSpawnChance = elapsed >= 15 ? 0.14 + late * 0.16 : 0.05 + d * 0.15;
+        const bonusSpawnChance = elapsed < 30 ? 0.035 + d * 0.04 : 0.08 + mid * 0.11 + late * 0.10;
         if (Math.random() < bonusSpawnChance) {
           spawnFaller();
         }
-        if (elapsed >= 15 && Math.random() < 0.035 + late * 0.055) {
+        if (elapsed >= 45 && Math.random() < 0.025 + late * 0.06) {
           spawnFaller();
         }
-        const pace = elapsed >= 15 ? lerp(0.78, 0.42, late) : lerp(1.08, 0.76, d);
-        spawnTimer = random(pace * 0.58, pace * 1.18);
+        const pace = elapsed < 30
+          ? lerp(1.28, 1.06, d)
+          : elapsed < 45
+            ? lerp(1.05, 0.88, mid)
+            : lerp(0.86, 0.44, Math.max(mid, late));
+        spawnTimer = random(pace * 0.62, pace * (finalTen > 0 ? 1.02 : 1.22));
       }
 
       let direction = heldDirection;
@@ -1127,8 +1151,9 @@
         faller.bob += dt * 3.2;
 
         if (faller.type === 'rock') {
-          // Rocks keep accelerating as they fall, making them feel heavier and more dangerous.
-          faller.vy = Math.min(faller.maxVy, faller.vy * (1 + faller.rockGrowth * dt));
+          // Rocks accelerate, but only become extremely fast in the last 10 seconds.
+          const endRush = finalTenDifficulty();
+          faller.vy = Math.min(faller.maxVy, faller.vy * (1 + (faller.rockGrowth + endRush * 1.8) * dt));
         }
 
         faller.y += faller.vy * dt;
