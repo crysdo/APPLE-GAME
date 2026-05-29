@@ -10,7 +10,8 @@
   <style>
     @font-face {
       font-family: "Fluttershy";
-      src: url("Fluttershy-Regular.woff2") format("woff2");
+      src: url("Fluttershy-Regular.ttf") format("truetype"),
+           url("Fluttershy-Regular.woff2") format("woff2");
       font-weight: normal;
       font-style: normal;
     }
@@ -81,9 +82,26 @@
       z-index: 3;
       display: grid;
       grid-template-columns: auto 1fr auto;
-      gap: 12px;
+      grid-template-areas:
+        "score lives timer"
+        "hint hint hint";
+      gap: 6px 12px;
       align-items: start;
       pointer-events: none;
+    }
+
+    .score-hud {
+      grid-area: score;
+    }
+
+    .lives-hud {
+      grid-area: lives;
+      justify-self: center;
+    }
+
+    .timer-hud {
+      grid-area: timer;
+      justify-self: end;
     }
 
     .hud-pill {
@@ -252,10 +270,10 @@
     }
     .end-character {
       position: absolute;
-      right: 10px;
-      bottom: 12px;
-      width: 92px;
-      height: 92px;
+      right: 46px;
+      top: 26px;
+      width: 86px;
+      height: 86px;
       object-fit: contain;
       pointer-events: none;
       user-select: none;
@@ -507,12 +525,15 @@
 
 
     .controls-hint {
-      margin-top: 8px;
+      grid-area: hint;
+      justify-self: center;
+      margin-top: 0;
       color: #ffffff;
-      font-size: 24px;
-      line-height: 1.2;
+      font-size: clamp(11px, 1.8vw, 16px);
+      line-height: 1.15;
       text-align: center;
       font-family: "Fluttershy", sans-serif;
+      font-weight: normal;
       text-shadow: 0 2px 4px rgba(0,0,0,0.35);
       pointer-events: none;
     }
@@ -523,7 +544,7 @@
     <canvas id="gameCanvas" width="1180" height="740"></canvas>
 
     <section class="hud" aria-live="polite">
-      <div class="hud-pill">
+      <div class="hud-pill score-hud">
         <svg class="hud-icon" viewBox="0 0 80 80" aria-hidden="true">
           <path d="M42 18c5-10 12-14 21-14 0 10-6 17-18 21z" fill="#7bab5e"/>
           <path d="M39 21c0-8 3-13 5-18" fill="none" stroke="#96602d" stroke-width="7" stroke-linecap="round"/>
@@ -535,11 +556,9 @@
           <span id="score" class="score">0</span>
         </span>
       </div>
-<div class="controls-hint">use arrows on your keypad or finger in mobile to move the basket</div>
+<div id="hearts" class="hud-center lives-hud" aria-label="Lives"></div>
 
-      <div id="hearts" class="hud-center" aria-label="Lives"></div>
-
-      <div class="hud-pill">
+      <div class="hud-pill timer-hud">
         <svg class="hud-icon" viewBox="0 0 80 80" aria-hidden="true">
           <circle cx="40" cy="42" r="30" fill="#f7dfb3" stroke="#9a6442" stroke-width="5"/>
           <circle cx="40" cy="42" r="22" fill="#fffaf0" stroke="#d8bc83" stroke-width="3"/>
@@ -551,6 +570,7 @@
           <span id="timer" class="timer">1:30</span>
         </span>
       </div>
+      <div class="controls-hint">use arrows on your keypad or finger in mobile to move the basket</div>
     </section>
 
     <div id="startOverlay" class="overlay">
@@ -571,7 +591,7 @@
       <div class="panel end-panel">
         <h2>Game Ended</h2>
         <img class="end-character" src="caleb-gege.png" alt="" aria-hidden="true">
-        <p id="endReason">The picnic timer finished.</p>
+        <p id="endReason">Thank you pip for helping your dearest Caleb</p>
         <div class="score-card">
           <div class="score-tile">
             <span>Final Score</span>
@@ -868,9 +888,7 @@
       bestScoreEl.textContent = best;
       finalTreatsEl.textContent = stats.treats;
       finalBumpsEl.textContent = stats.bumps;
-      endReasonEl.textContent = reason === 'lives'
-        ? 'The basket got bumped three times.'
-        : 'The picnic timer finished.';
+      endReasonEl.textContent = 'Thank you pip for helping your dearest Caleb';
       updateHud();
       draw();
       endOverlay.hidden = false;
