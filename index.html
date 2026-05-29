@@ -581,8 +581,8 @@
 
     const GAME_SECONDS = 90;
     const MAX_LIVES = 3;
-    const BASKET_WIDTH = 230;
-    const BASKET_HEIGHT = 160;
+    const BASKET_WIDTH = 300;
+    const BASKET_HEIGHT = 208;
     const POINTS = {
       redApple: 10,
       greenApple: 15,
@@ -679,7 +679,7 @@
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      basket.y = height - Math.max(190, 212 * clamp(scale, 0.72, 1));
+      basket.y = height - Math.max(150, 180 * clamp(scale, 0.72, 1));
       basket.x = clamp(basket.x, BASKET_WIDTH * scale * 0.5, width - BASKET_WIDTH * scale * 0.5);
       makeScenery();
     }
