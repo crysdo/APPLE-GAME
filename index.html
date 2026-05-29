@@ -243,22 +243,19 @@
         linear-gradient(#fffaf0, #fff1cd);
       background-size: auto, 24px 24px, 24px 24px, auto;
     }
-
-    .end-panel::after {
-      content: "";
+    .end-character {
       position: absolute;
-      right: 18px;
-      top: 58px;
-      width: 76px;
-      height: 76px;
-      border: 5px solid #b02c31;
-      border-radius: 50% 50% 46% 46%;
-      background:
-        radial-gradient(circle at 30% 34%, #fff1cd 0 14px, transparent 15px),
-        linear-gradient(90deg, #b02c31 0 49%, #fbd3ac 49% 100%);
-      box-shadow: 0 5px 0 rgba(123, 70, 53, 0.2);
-      transform: rotate(7deg);
+      right: 16px;
+      top: 46px;
+      width: 112px;
+      height: 112px;
+      object-fit: contain;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      background: transparent;
     }
+
 
     .panel p {
       margin: 12px auto 18px;
@@ -494,19 +491,19 @@
         padding: 24px 18px 20px;
       }
     }
-  
-    .title-apple {
+    .title-character {
       position: absolute;
-      right: 34px;
-      top: 8px;
-      width: 96px;
-      height: 96px;
+      right: 22px;
+      top: -4px;
+      width: 118px;
+      height: 118px;
       object-fit: contain;
       pointer-events: none;
       user-select: none;
       z-index: 3;
       background: transparent;
     }
+
 
 </style>
 </head>
@@ -548,7 +545,7 @@
       <div class="panel start-panel">
         <span class="title-star" aria-hidden="true"></span>
                 <span class="tiny-star" aria-hidden="true">★</span>
-                        <img class="title-apple" src="sunny-apple-caleb-apple.gif" alt="" aria-hidden="true">
+                        <img class="title-character" src="caleb-gege.png" alt="" aria-hidden="true">
         <h1>Gege's Picnic</h1>
         <div class="credit">a mini fan-made game by <a href="https://www.instagram.com/studiocrysdo/" target="_blank" rel="noopener">@studiocrysdo</a></div>
         <p class="start-message">Help gege prep for our picnic date by gathering only the apple treats!</p>
@@ -561,6 +558,7 @@
     <div id="endOverlay" class="overlay" hidden>
       <div class="panel end-panel">
         <h2>Game Ended</h2>
+        <img class="end-character" src="caleb-gege.png" alt="" aria-hidden="true">
         <p id="endReason">The picnic timer finished.</p>
         <div class="score-card">
           <div class="score-tile">
